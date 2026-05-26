@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:reppo/core/external_browser.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({Key? key}) : super(key: key);
+  Future<void> _startOAuthLogin(BuildContext context) async {
+    try {
+      await ExternalBrowser.launch(ExternalBrowser.oauthLoginUrl);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open login page: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,9 +27,7 @@ class LoginScreen extends StatelessWidget {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () {
-                // auth
-              },
+              onTap: () => _startOAuthLogin(context),
               borderRadius: BorderRadius.circular(12),
               child: Ink(
                 decoration: BoxDecoration(
