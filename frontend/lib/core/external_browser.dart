@@ -10,7 +10,7 @@ class ExternalBrowser {
   static const _channel = MethodChannel('com.example.reppo/external_browser');
 
   static const oauthLoginUrl =
-      'http://172.33.5.196:8080/oauth2/authorization/github';
+      'http://192.168.1.7:8080/oauth2/authorization/github';
 
   static Future<void> launch(String url) async {
     if (!kIsWeb && Platform.isAndroid) {

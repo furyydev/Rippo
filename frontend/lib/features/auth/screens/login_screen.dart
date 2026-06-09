@@ -8,9 +8,9 @@ class LoginScreen extends StatelessWidget {
       await ExternalBrowser.launch(ExternalBrowser.oauthLoginUrl);
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open login page: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not open login page: $e')));
     }
   }
 
