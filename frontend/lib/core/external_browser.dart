@@ -21,4 +21,21 @@ class ExternalBrowser {
       'External browser launch is only supported on Android.',
     );
   }
+
+  static Future<String?> getInitialAuthUri() async {
+    if (!kIsWeb && Platform.isAndroid) {
+      return _channel.invokeMethod<String>('getInitialAuthUri');
+    }
+
+    return null;
+  }
+
+  static void setAuthCallback(void Function(String uri)? onAuthCallback) {
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'authCallback') {
+        final uri = call.arguments as String;
+        onAuthCallback?.call(uri);
+      }
+    });
+  }
 }
