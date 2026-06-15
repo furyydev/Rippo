@@ -7,12 +7,19 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+    private var browserChannel: MethodChannel? = null
+    private var pendingAuthUri: String? = null
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(
+        browserChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             "com.example.reppo/external_browser",
-        ).setMethodCallHandler { call, result ->
+        )
+
+        pendingAuthUri = intent?.dataString
+
+        browserChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
                 "launch" -> {
                     val url = call.argument<String>("url")
@@ -27,8 +34,20 @@ class MainActivity : FlutterActivity() {
                         result.error("LAUNCH_FAILED", e.message, null)
                     }
                 }
+                "getInitialAuthUri" -> {
+                    result.success(pendingAuthUri)
+                    pendingAuthUri = null
+                }
                 else -> result.notImplemented()
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        val authUri = intent.dataString ?: return
+        browserChannel?.invokeMethod("authCallback", authUri)
     }
 }
