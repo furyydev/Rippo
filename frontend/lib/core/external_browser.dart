@@ -3,14 +3,16 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import 'app_config.dart';
+
 /// Opens a URL in the device's default browser via a native Android intent.
 class ExternalBrowser {
   ExternalBrowser._();
 
   static const _channel = MethodChannel('com.example.reppo/external_browser');
 
-  static const oauthLoginUrl =
-      'http://192.168.1.7:8080/oauth2/authorization/github';
+  static String get oauthLoginUrl =>
+      '${AppConfig.apiBaseUrl}/oauth2/authorization/github';
 
   static Future<void> launch(String url) async {
     if (!kIsWeb && Platform.isAndroid) {

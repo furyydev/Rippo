@@ -1,6 +1,7 @@
 package com.rippo.backend.controller;
 
 import com.rippo.backend.service.GitHubService;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
@@ -9,6 +10,7 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -40,16 +42,17 @@ public class RepoController {
     public String getRepositoryContents(
             @PathVariable String owner,
             @PathVariable String repo,
+            @RequestParam(defaultValue = "") String path,
             OAuth2AuthenticationToken authenticationToken,
             @AuthenticationPrincipal OAuth2User oauth2User
     ) {
         String accessToken = getAccessToken(authenticationToken, oauth2User);
 
-        return gitHubService.getRepositoryContents(owner, repo, accessToken);
+        return gitHubService.getRepositoryContents(owner, repo, path, accessToken);
     }
 
     @GetMapping("/repo/{owner}/{repo}/readme")
-    public String getRepositoryReadme(
+    public Map<String, Object> getRepositoryReadme(
             @PathVariable String owner,
             @PathVariable String repo,
             OAuth2AuthenticationToken authenticationToken,
@@ -70,6 +73,19 @@ public class RepoController {
         String accessToken = getAccessToken(authenticationToken, oauth2User);
 
         return gitHubService.getRepositoryCommits(owner, repo, accessToken);
+    }
+
+    @GetMapping("/repo/{owner}/{repo}/file")
+    public Map<String, Object> getFileContent(
+            @PathVariable String owner,
+            @PathVariable String repo,
+            @RequestParam String path,
+            OAuth2AuthenticationToken authenticationToken,
+            @AuthenticationPrincipal OAuth2User oauth2User
+    ) {
+        String accessToken = getAccessToken(authenticationToken, oauth2User);
+
+        return gitHubService.getFileContent(owner, repo, path, accessToken);
     }
 
     private String getAccessToken(

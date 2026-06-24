@@ -82,15 +82,12 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(12),
               child: Ink(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.white, width: 1.5),
                 ),
                 child: const Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 14,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 32, vertical: 14),
                   child: Text(
                     'Login',
                     style: TextStyle(

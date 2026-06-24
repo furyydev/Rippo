@@ -1,17 +1,79 @@
-# reppo
+# Rippo
 
-A new Flutter project.
+Rippo is a cross-platform GitHub repository explorer built with Flutter and Spring Boot.
+
+Users can connect their GitHub account, browse repositories, explore project files, and view repository details through a clean and simple interface.
+
+## Features
+
+* GitHub OAuth Login
+* Fetch User Repositories
+* Repository Explorer
+* File & Folder Navigation
+* Repository Details View
+* Spring Boot Backend Integration
+* Flutter Cross-Platform Frontend
+
+## Tech Stack
+
+### Frontend
+
+* Flutter
+* Dart
+
+### Backend
+
+* Spring Boot
+* Spring Security
+* OAuth2 Client
+
+### APIs
+
+* GitHub REST API
+
+## Project Structure
+
+```text
+frontend/
+├── lib/
+├── android/
+└── pubspec.yaml
+
+backend/
+├── src/
+├── pom.xml
+└── mvnw
+```
+
+## Current Status
+
+Rippo is currently focused on GitHub repository exploration and codebase navigation.
+
+Upcoming features include:
+
+* README Viewer
+* Commit History
+* File Content Viewer
+* AI-Powered Repository Analysis
+* MCP-Based Tool Architecture
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+### Backend
 
-A few resources to get you started if this is your first Flutter project:
+```bash
+cd backend
+./mvnw spring-boot:run
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+### Frontend
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+cd frontend
+flutter pub get
+flutter run
+```
+
+## License
+
+This project is for learning and experimentation purposes.
