@@ -1,0 +1,11 @@
+CREATE TABLE users (
+    id BIGSERIAL PRIMARY KEY,
+    github_id BIGINT NOT NULL UNIQUE,
+    username VARCHAR(255) NOT NULL,
+    avatar_url TEXT,
+    email VARCHAR(320),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_users_github_id ON users (github_id);
