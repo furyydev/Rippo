@@ -9,6 +9,19 @@ class ApiService {
   static String get baseUrl => AppConfig.apiBaseUrl;
   static String? sessionId;
 
+  Future<GitHubUserModel> fetchUser() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/user'),
+      headers: _headers(),
+    );
+
+    if (response.statusCode == 200) {
+      return GitHubUserModel.fromJson(jsonDecode(response.body));
+    }
+
+    throw Exception(_errorMessage(response, 'Failed to load GitHub profile'));
+  }
+
   Future<List<RepoModel>> fetchRepos() async {
     final url = Uri.parse('$baseUrl/repos');
     final response = await http.get(url, headers: _headers());

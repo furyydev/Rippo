@@ -21,6 +21,21 @@ class RepoModel {
   }
 }
 
+class GitHubUserModel {
+  final String username;
+  final String profileUrl;
+
+  GitHubUserModel({required this.username, required this.profileUrl});
+
+  factory GitHubUserModel.fromJson(Map<String, dynamic> json) {
+    final username = json['login'] as String? ?? '';
+    return GitHubUserModel(
+      username: username,
+      profileUrl: json['html_url'] as String? ?? 'https://github.com/$username',
+    );
+  }
+}
+
 class RepoContentModel {
   final String name;
   final String path;

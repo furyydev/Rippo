@@ -3,17 +3,16 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 
 import '../models/repo_model.dart';
 import '../services/api_service.dart';
+import 'ask_reppo_screen.dart';
 import 'file_viewer_screen.dart';
 
 class RepoDetailScreen extends StatefulWidget {
-  final String owner;
-  final String repoName;
+  final RepoModel repository;
   final String currentPath;
 
   const RepoDetailScreen({
     super.key,
-    required this.owner,
-    required this.repoName,
+    required this.repository,
     this.currentPath = '',
   });
 
@@ -34,16 +33,19 @@ class _RepoDetailScreenState extends State<RepoDetailScreen> {
     final apiService = ApiService();
 
     contentsFuture = apiService.fetchRepoContents(
-      widget.owner,
-      widget.repoName,
+      widget.repository.owner,
+      widget.repository.name,
       path: widget.currentPath,
     );
 
     if (isRepositoryRoot) {
-      readmeFuture = apiService.fetchRepoReadme(widget.owner, widget.repoName);
+      readmeFuture = apiService.fetchRepoReadme(
+        widget.repository.owner,
+        widget.repository.name,
+      );
       commitsFuture = apiService.fetchRepoCommits(
-        widget.owner,
-        widget.repoName,
+        widget.repository.owner,
+        widget.repository.name,
       );
     }
   }
@@ -54,8 +56,7 @@ class _RepoDetailScreenState extends State<RepoDetailScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => RepoDetailScreen(
-            owner: widget.owner,
-            repoName: widget.repoName,
+            repository: widget.repository,
             currentPath: item.path,
           ),
         ),
@@ -68,8 +69,8 @@ class _RepoDetailScreenState extends State<RepoDetailScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => FileViewerScreen(
-            owner: widget.owner,
-            repoName: widget.repoName,
+            owner: widget.repository.owner,
+            repoName: widget.repository.name,
             path: item.path,
           ),
         ),
@@ -263,28 +264,48 @@ class _RepoDetailScreenState extends State<RepoDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final title = isRepositoryRoot
-        ? widget.repoName
+        ? widget.repository.name
         : widget.currentPath.split('/').last;
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: ListView(
+        padding: EdgeInsets.only(bottom: isRepositoryRoot ? 88 : 0),
         children: [
           buildPathHeader(),
+          if (isRepositoryRoot) ...[
+            sectionTitle('README', Icons.description_outlined),
+            buildReadmeSection(),
+          ],
           sectionTitle(
-            isRepositoryRoot ? 'Files' : 'Folder contents',
+            isRepositoryRoot ? 'Repository Files' : 'Folder contents',
             Icons.folder_open,
           ),
           buildContentsSection(),
           if (isRepositoryRoot) ...[
-            sectionTitle('README', Icons.description_outlined),
-            buildReadmeSection(),
-            sectionTitle('Latest commits', Icons.history),
+            sectionTitle('Recent Commits', Icons.history),
             buildCommitsSection(),
           ] else
             const SizedBox(height: 24),
         ],
       ),
+      bottomNavigationBar: isRepositoryRoot
+          ? SafeArea(
+              minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: FilledButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          AskReppoScreen(repository: widget.repository),
+                    ),
+                  );
+                },
+                child: const Text('Ask Reppo'),
+              ),
+            )
+          : null,
     );
   }
 }
