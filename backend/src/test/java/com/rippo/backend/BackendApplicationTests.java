@@ -90,6 +90,40 @@ class BackendApplicationTests {
                 .containsExactly("How is authentication wired?");
     }
 
+    @Test
+    void repositoryContextHistoryReturnsOnlyLatestFiveMessagesInConversationOrder() {
+        User user = userService.findOrCreateFromGitHub(githubUser(
+                98765L,
+                "history-owner",
+                null,
+                null
+        ));
+        ChatSession chatSession = chatPersistenceService.createSession(
+                user,
+                "history-owner",
+                "rippo",
+                "History test"
+        );
+
+        for (int index = 1; index <= 7; index++) {
+            chatPersistenceService.addMessage(
+                    chatSession,
+                    ChatMessageRole.USER,
+                    "Message " + index
+            );
+        }
+
+        assertThat(chatPersistenceService.getPreviousFiveMessages(chatSession))
+                .extracting(ChatMessage::getContent)
+                .containsExactly(
+                        "Message 3",
+                        "Message 4",
+                        "Message 5",
+                        "Message 6",
+                        "Message 7"
+                );
+    }
+
     private DefaultOAuth2User githubUser(
             Long githubId,
             String username,

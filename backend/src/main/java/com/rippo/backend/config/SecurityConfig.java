@@ -28,7 +28,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/ai/test")
+                        .ignoringRequestMatchers("/ai/test", "/chat", "/chat/**")
                 )
                 .oauth2Login(oauth -> oauth
                         .successHandler((request, response, authentication) -> {

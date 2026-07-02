@@ -7,6 +7,8 @@ import com.rippo.backend.entity.User;
 import com.rippo.backend.repository.ChatMessageRepository;
 import com.rippo.backend.repository.ChatSessionRepository;
 import java.util.List;
+import java.util.Optional;
+import java.util.ArrayList;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,5 +50,21 @@ public class ChatPersistenceService {
     @Transactional(readOnly = true)
     public List<ChatMessage> getMessages(ChatSession chatSession) {
         return chatMessageRepository.findByChatSessionIdOrderByCreatedAtAsc(chatSession.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<ChatSession> findSessionForUser(Long chatSessionId, Long userId) {
+        return chatSessionRepository.findByIdAndUserId(chatSessionId, userId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ChatMessage> getPreviousFiveMessages(ChatSession chatSession) {
+        List<ChatMessage> messages = new ArrayList<>(
+                chatMessageRepository.findTop5ByChatSessionIdOrderByCreatedAtDesc(
+                        chatSession.getId()
+                )
+        );
+        messages.sort((first, second) -> first.getCreatedAt().compareTo(second.getCreatedAt()));
+        return messages;
     }
 }
