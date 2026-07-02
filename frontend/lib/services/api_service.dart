@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../core/app_config.dart';
+import '../models/chat_model.dart';
 import '../models/repo_model.dart';
 
 class ApiService {
@@ -110,6 +111,51 @@ class ApiService {
     throw Exception(_errorMessage(response, 'Failed to load file'));
   }
 
+  Future<ChatSessionModel> createChatSession(
+    String owner,
+    String repoName,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/chat/sessions'),
+      headers: _jsonHeaders(),
+      body: jsonEncode({
+        'repositoryOwner': owner,
+        'repositoryName': repoName,
+        'title': 'Chat about $owner/$repoName',
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return ChatSessionModel.fromJson(jsonDecode(response.body));
+    }
+
+    throw Exception(_errorMessage(response, 'Failed to create chat session'));
+  }
+
+  Future<ChatResponseModel> sendChatMessage({
+    required String owner,
+    required String repoName,
+    required int chatSessionId,
+    required String message,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/chat'),
+      headers: _jsonHeaders(),
+      body: jsonEncode({
+        'repositoryOwner': owner,
+        'repositoryName': repoName,
+        'chatSessionId': chatSessionId,
+        'message': message,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return ChatResponseModel.fromJson(jsonDecode(response.body));
+    }
+
+    throw Exception(_errorMessage(response, 'Failed to send chat message'));
+  }
+
   Uri _repoUrl(String owner, String repoName, String endpoint) {
     return Uri.parse(
       '$baseUrl/repo/${Uri.encodeComponent(owner)}/'
@@ -132,5 +178,13 @@ class ApiService {
     }
 
     return {'Cookie': 'JSESSIONID=$sessionId'};
+  }
+
+  Map<String, String> _jsonHeaders() {
+    return {
+      ..._headers(),
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
   }
 }

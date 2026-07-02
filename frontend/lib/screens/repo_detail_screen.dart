@@ -302,7 +302,7 @@ class _RepoDetailScreenState extends State<RepoDetailScreen> {
                     ),
                   );
                 },
-                child: const Text('Ask Reppo'),
+                child: const Text('Ask Rippo'),
               ),
             )
           : null,

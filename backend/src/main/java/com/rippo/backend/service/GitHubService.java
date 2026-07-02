@@ -61,6 +61,21 @@ public class GitHubService {
         return response;
     }
 
+    public String getDefaultBranch(String owner, String repo, String accessToken) {
+        String url = buildRepoUrl(owner, repo, "");
+        JsonNode repository = readJson(makeGitHubGetRequest(url, accessToken));
+        String defaultBranch = repository.path("default_branch").asText();
+
+        if (defaultBranch.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "GitHub did not return the repository default branch"
+            );
+        }
+
+        return defaultBranch;
+    }
+
     public String getRepositoryCommits(String owner, String repo, String accessToken) {
         String url = UriComponentsBuilder
                 .fromUriString(buildRepoUrl(owner, repo, "commits"))
@@ -119,7 +134,11 @@ public class GitHubService {
     ) {
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromUriString("https://api.github.com")
-                .pathSegment("repos", owner, repo, endpoint);
+                .pathSegment("repos", owner, repo);
+
+        if (endpoint != null && !endpoint.isBlank()) {
+            builder.pathSegment(endpoint);
+        }
 
         for (String path : remainingPath) {
             for (String segment : path.split("/")) {
@@ -178,9 +197,12 @@ public class GitHubService {
                     .bodyToMono(String.class)
                     .block();
         } catch (WebClientResponseException exception) {
+            String message = exception.getStatusCode().value() == 404
+                    ? "GitHub resource was not found"
+                    : "GitHub API request failed";
             throw new ResponseStatusException(
                     exception.getStatusCode(),
-                    "GitHub API request failed: " + exception.getResponseBodyAsString(),
+                    message,
                     exception
             );
         } catch (Exception exception) {
