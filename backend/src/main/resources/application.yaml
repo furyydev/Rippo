@@ -37,3 +37,13 @@ spring:
 gemini:
   api-key: ${GEMINI_API_KEY}
   model: gemini-2.5-flash
+  temperature: 0.1
+  max-output-tokens: 4096
+  retry:
+    max-attempts: 3
+    initial-backoff-ms: 500
+    max-backoff-ms: 4000
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [session=%X{chatSessionId:-none}] %logger{36} - %msg%n"

@@ -6,7 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.rippo.backend.ai.service.GeminiService;
+import com.rippo.backend.chat.agent.AgentLoop;
 import com.rippo.backend.chat.dto.ChatRequest;
 import com.rippo.backend.chat.dto.ChatResponse;
 import com.rippo.backend.chat.model.RepositoryContext;
@@ -15,6 +15,7 @@ import com.rippo.backend.entity.ChatMessageRole;
 import com.rippo.backend.entity.ChatSession;
 import com.rippo.backend.entity.User;
 import com.rippo.backend.service.ChatPersistenceService;
+import com.rippo.backend.mcp.service.MCPService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -28,12 +29,14 @@ class ChatServiceTests {
         ChatPersistenceService persistence = mock(ChatPersistenceService.class);
         RepositoryContextService contextService = mock(RepositoryContextService.class);
         PromptBuilder promptBuilder = mock(PromptBuilder.class);
-        GeminiService geminiService = mock(GeminiService.class);
+        AgentLoop agentLoop = mock(AgentLoop.class);
+        MCPService mcpService = mock(MCPService.class);
         ChatService chatService = new ChatService(
                 persistence,
                 contextService,
                 promptBuilder,
-                geminiService
+                agentLoop,
+                mcpService
         );
 
         ChatRequest request = new ChatRequest(
@@ -62,10 +65,13 @@ class ChatServiceTests {
         when(persistence.findSessionForUser(10L, 7L)).thenReturn(Optional.of(session));
         when(contextService.loadContext(session, "owner", "repo", "token"))
                 .thenReturn(context);
-        when(promptBuilder.build(context, "Explain authentication")).thenReturn("prompt");
+        when(mcpService.getToolDefinitions()).thenReturn(List.of());
+        when(promptBuilder.build(context, "Explain authentication", List.of()))
+                .thenReturn("prompt");
         when(persistence.addMessage(session, ChatMessageRole.USER, "Explain authentication"))
                 .thenReturn(userMessage);
-        when(geminiService.generateText("prompt")).thenReturn("Authentication explanation");
+        when(agentLoop.run("prompt", "token", "owner", "repo"))
+                .thenReturn("Authentication explanation");
         when(persistence.addMessage(
                 session,
                 ChatMessageRole.ASSISTANT,
@@ -80,13 +86,13 @@ class ChatServiceTests {
         assertThat(response.chatSessionId()).isEqualTo(10L);
         assertThat(response.timestamp()).isEqualTo(responseTime);
 
-        InOrder order = inOrder(persistence, geminiService);
+        InOrder order = inOrder(persistence, agentLoop);
         order.verify(persistence).addMessage(
                 session,
                 ChatMessageRole.USER,
                 "Explain authentication"
         );
-        order.verify(geminiService).generateText("prompt");
+        order.verify(agentLoop).run("prompt", "token", "owner", "repo");
         order.verify(persistence).addMessage(
                 session,
                 ChatMessageRole.ASSISTANT,
