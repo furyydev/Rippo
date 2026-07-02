@@ -57,6 +57,9 @@ rippo:
   cache:
     default-ttl: ${CACHE_DEFAULT_TTL:10m}
     repository-metadata-ttl: ${CACHE_REPOSITORY_METADATA_TTL:1h}
+    readme-ttl: ${CACHE_README_TTL:6h}
+    directory-ttl: ${CACHE_DIRECTORY_TTL:1h}
+    file-ttl: ${CACHE_FILE_TTL:6h}
 
 logging:
   pattern:

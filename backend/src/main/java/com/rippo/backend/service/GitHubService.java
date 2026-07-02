@@ -137,6 +137,45 @@ public class GitHubService {
             String path,
             String accessToken
     ) {
+        long startNanos = System.nanoTime();
+        String normalizedPath = normalizePath(path);
+        String cacheKeyPath = normalizedPath.isEmpty() ? "root" : normalizedPath;
+        String cacheKey = "repo:" + owner + ":" + repo + ":dir:" + cacheKeyPath;
+
+        @SuppressWarnings("unchecked")
+        Optional<List<Map<String, Object>>> cached = cacheService.get(cacheKey, List.class)
+                .map(value -> (List<Map<String, Object>>) value);
+        if (cached.isPresent()) {
+            LOGGER.info(
+                    "Directory cache HIT: owner={} repo={} path={} executionMs={}",
+                    owner,
+                    repo,
+                    cacheKeyPath,
+                    (System.nanoTime() - startNanos) / 1_000_000
+            );
+            return cached.get();
+        }
+
+        List<Map<String, Object>> listing =
+                fetchDirectoryContentsFromGitHub(owner, repo, path, accessToken);
+        boolean stored = cacheService.put(cacheKey, listing, cacheProperties.getDirectoryTtl());
+        LOGGER.info(
+                "Directory cache MISS: owner={} repo={} path={} stored={} executionMs={}",
+                owner,
+                repo,
+                cacheKeyPath,
+                stored,
+                (System.nanoTime() - startNanos) / 1_000_000
+        );
+        return listing;
+    }
+
+    private List<Map<String, Object>> fetchDirectoryContentsFromGitHub(
+            String owner,
+            String repo,
+            String path,
+            String accessToken
+    ) {
         JsonNode contents = readJson(getRepositoryContents(owner, repo, path, accessToken));
         if (!contents.isArray()) {
             throw new ResponseStatusException(
@@ -159,7 +198,58 @@ public class GitHubService {
         return response;
     }
 
+    /**
+     * Normalizes a repository path for deterministic cache-key generation only.
+     * Trims surrounding whitespace, collapses duplicate slashes, and strips leading
+     * and trailing slashes. Returns an empty string for a null, blank, or "/" path.
+     * This is intentionally generic so it can be reused for other path-based caches.
+     * It must NOT be used to alter the path sent to the GitHub API.
+     */
+    private String normalizePath(String path) {
+        if (path == null) {
+            return "";
+        }
+        String normalized = path.trim()
+                .replaceAll("/{2,}", "/")
+                .replaceAll("^/+", "")
+                .replaceAll("/+$", "");
+        return normalized;
+    }
+
     public Map<String, Object> getRepositoryReadme(
+            String owner,
+            String repo,
+            String accessToken
+    ) {
+        long startNanos = System.nanoTime();
+        String cacheKey = "repo:" + owner + ":" + repo + ":readme";
+
+        @SuppressWarnings("unchecked")
+        Optional<Map<String, Object>> cached = cacheService.get(cacheKey, Map.class)
+                .map(value -> (Map<String, Object>) value);
+        if (cached.isPresent()) {
+            LOGGER.info(
+                    "README cache HIT: owner={} repo={} executionMs={}",
+                    owner,
+                    repo,
+                    (System.nanoTime() - startNanos) / 1_000_000
+            );
+            return cached.get();
+        }
+
+        Map<String, Object> readme = fetchRepositoryReadmeFromGitHub(owner, repo, accessToken);
+        boolean stored = cacheService.put(cacheKey, readme, cacheProperties.getReadmeTtl());
+        LOGGER.info(
+                "README cache MISS: owner={} repo={} stored={} executionMs={}",
+                owner,
+                repo,
+                stored,
+                (System.nanoTime() - startNanos) / 1_000_000
+        );
+        return readme;
+    }
+
+    private Map<String, Object> fetchRepositoryReadmeFromGitHub(
             String owner,
             String repo,
             String accessToken
@@ -213,6 +303,45 @@ public class GitHubService {
             );
         }
 
+        long startNanos = System.nanoTime();
+        String normalizedPath = normalizePath(path);
+        String cacheKey = "repo:" + owner + ":" + repo + ":file:" + normalizedPath;
+
+        @SuppressWarnings("unchecked")
+        Optional<Map<String, Object>> cached = cacheService.get(cacheKey, Map.class)
+                .map(value -> (Map<String, Object>) value);
+        if (cached.isPresent()) {
+            LOGGER.info(
+                    "File cache HIT: owner={} repo={} path={} executionMs={}",
+                    owner,
+                    repo,
+                    normalizedPath,
+                    (System.nanoTime() - startNanos) / 1_000_000
+            );
+            return cached.get();
+        }
+
+        // Only successful responses reach this point; failures throw before the cache PUT,
+        // so not-found, not-a-file, and size-limit errors are never cached.
+        Map<String, Object> file = fetchFileContentFromGitHub(owner, repo, path, accessToken);
+        boolean stored = cacheService.put(cacheKey, file, cacheProperties.getFileTtl());
+        LOGGER.info(
+                "File cache MISS: owner={} repo={} path={} stored={} executionMs={}",
+                owner,
+                repo,
+                normalizedPath,
+                stored,
+                (System.nanoTime() - startNanos) / 1_000_000
+        );
+        return file;
+    }
+
+    private Map<String, Object> fetchFileContentFromGitHub(
+            String owner,
+            String repo,
+            String path,
+            String accessToken
+    ) {
         String url = buildRepoUrl(owner, repo, "contents", path);
         JsonNode file = readJson(makeGitHubGetRequest(url, accessToken));
 
