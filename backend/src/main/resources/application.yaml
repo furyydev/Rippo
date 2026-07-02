@@ -8,6 +8,15 @@ spring:
     username: ${SUPABASE_DB_USERNAME:${DATABASE_USERNAME:postgres}}
     password: ${SUPABASE_DB_PASSWORD:${DATABASE_PASSWORD:postgres}}
     driver-class-name: org.postgresql.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:2s}
+      timeout: ${REDIS_TIMEOUT:2s}
+      repositories:
+        enabled: false
   jpa:
     hibernate:
       ddl-auto: validate
@@ -43,6 +52,11 @@ gemini:
     max-attempts: 3
     initial-backoff-ms: 500
     max-backoff-ms: 4000
+
+rippo:
+  cache:
+    default-ttl: ${CACHE_DEFAULT_TTL:10m}
+    repository-metadata-ttl: ${CACHE_REPOSITORY_METADATA_TTL:1h}
 
 logging:
   pattern:

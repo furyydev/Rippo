@@ -17,6 +17,10 @@ spring:
           github:
             client-id: test-client-id
             client-secret: test-client-secret
+  data:
+    redis:
+      connect-timeout: 100ms
+      timeout: 100ms
 
 gemini:
   api-key: test-api-key

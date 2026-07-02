@@ -2,6 +2,8 @@ package com.rippo.backend.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rippo.backend.cache.config.CacheProperties;
+import com.rippo.backend.cache.service.CacheService;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;
@@ -10,6 +12,9 @@ import java.util.Base64;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -20,14 +25,25 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Service
 public class GitHubService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(GitHubService.class);
+
     private static final int MAX_FILE_SIZE_BYTES = 1_000_000;
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
+    private final CacheService cacheService;
+    private final CacheProperties cacheProperties;
 
-    public GitHubService(WebClient webClient, ObjectMapper objectMapper) {
+    public GitHubService(
+            WebClient webClient,
+            ObjectMapper objectMapper,
+            CacheService cacheService,
+            CacheProperties cacheProperties
+    ) {
         this.webClient = webClient;
         this.objectMapper = objectMapper;
+        this.cacheService = cacheService;
+        this.cacheProperties = cacheProperties;
     }
 
     public String getRepositories(String accessToken) {
@@ -38,6 +54,43 @@ public class GitHubService {
     }
 
     public Map<String, Object> getRepositoryInfo(
+            String owner,
+            String repo,
+            String accessToken
+    ) {
+        long startNanos = System.nanoTime();
+        String cacheKey = "repo:" + owner + ":" + repo + ":metadata";
+
+        @SuppressWarnings("unchecked")
+        Optional<Map<String, Object>> cached = cacheService.get(cacheKey, Map.class)
+                .map(value -> (Map<String, Object>) value);
+        if (cached.isPresent()) {
+            LOGGER.info(
+                    "Repository metadata cache HIT: owner={} repo={} executionMs={}",
+                    owner,
+                    repo,
+                    (System.nanoTime() - startNanos) / 1_000_000
+            );
+            return cached.get();
+        }
+
+        Map<String, Object> metadata = fetchRepositoryInfoFromGitHub(owner, repo, accessToken);
+        boolean stored = cacheService.put(
+                cacheKey,
+                metadata,
+                cacheProperties.getRepositoryMetadataTtl()
+        );
+        LOGGER.info(
+                "Repository metadata cache MISS: owner={} repo={} stored={} executionMs={}",
+                owner,
+                repo,
+                stored,
+                (System.nanoTime() - startNanos) / 1_000_000
+        );
+        return metadata;
+    }
+
+    private Map<String, Object> fetchRepositoryInfoFromGitHub(
             String owner,
             String repo,
             String accessToken
