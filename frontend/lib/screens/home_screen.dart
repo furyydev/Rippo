@@ -48,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Reppo')),
+      appBar: AppBar(title: const Text('Rippo')),
       body: CustomScrollView(
         slivers: [
           SliverPadding(
