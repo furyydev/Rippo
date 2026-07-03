@@ -32,6 +32,14 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    // Name the generated APK "Rippo.apk" instead of "app-<buildType>.apk".
+    applicationVariants.all {
+        outputs.all {
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl)
+                .outputFileName = "Rippo.apk"
+        }
+    }
 }
 
 kotlin {

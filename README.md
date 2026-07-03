@@ -8,7 +8,8 @@
   <img alt="Language" src="https://img.shields.io/badge/Java-17-007396?logo=openjdk&logoColor=white">
   <img alt="Database" src="https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql&logoColor=white">
   <img alt="Cache" src="https://img.shields.io/badge/Cache-Redis-DC382D?logo=redis&logoColor=white">
-  <img alt="AI" src="https://img.shields.io/badge/AI-Gemini-8E75B2?logo=google&logoColor=white">
+  <img alt="AI" src="https://img.shields.io/badge/AI-Gemini%202.5%20Flash-8E75B2?logo=google&logoColor=white">
+  <img alt="Deployment" src="https://img.shields.io/badge/Deploy-Railway-0B0D0E?logo=railway&logoColor=white">
   <img alt="License" src="https://img.shields.io/badge/License-MIT-blue">
 </p>
 
@@ -25,6 +26,7 @@ production-oriented Spring Boot backend backed by PostgreSQL and an optional Red
 ## Table of Contents
 
 - [Overview](#overview)
+- [Download APK](#download-apk)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
@@ -47,15 +49,30 @@ production-oriented Spring Boot backend backed by PostgreSQL and an optional Red
 ## Overview
 
 Rippo connects a Flutter client to a Spring Boot backend that authenticates against GitHub,
-reads repository data through the GitHub REST API, and answers questions using the Gemini API.
-The backend exposes a small set of tools (repository metadata, README, directory listing, file
-content) that the model can call autonomously during a conversation. Tool calls are executed
-server-side, and the results are fed back to the model so its answers are grounded in the actual
-contents of the repository being discussed.
+reads repository data through the GitHub REST API, and answers questions using the Gemini API
+(Gemini 2.5 Flash). The backend exposes a small set of tools (repository metadata, README,
+directory listing, file content) that the model can call autonomously during a conversation. Tool
+calls are executed server-side, and the results are fed back to the model so its answers are
+grounded in the actual contents of the repository being discussed.
 
 Conversations are persisted in PostgreSQL, and repository reads are cached in Redis to reduce
 GitHub API traffic. GitHub remains the source of truth; Redis is strictly an optimization layer
 that the system can operate without.
+
+The backend is deployed on Railway, with PostgreSQL hosted on Supabase and Redis on Upstash. The
+Flutter client connects to this production backend.
+
+---
+
+## Download APK
+
+A preview build of the Android app is available for testing:
+
+**[Download Rippo APK](https://drive.google.com/file/d/1TJXBbmeMLHALiqmQ6an6Bt6xljaEBAAM/view?usp=sharing)**
+
+This is a preview/testing build intended for collecting early feedback. It connects to the
+production backend deployed on Railway. The frontend is a temporary showcase UI, so some rough
+edges are expected and behavior may change between builds.
 
 ---
 
@@ -109,8 +126,16 @@ that the system can operate without.
 
 | Technology | Purpose |
 | --- | --- |
-| Gemini API | Language model |
+| Gemini 2.5 Flash | Language model |
 | MCP-inspired tool calling | Grounded repository retrieval |
+
+**Deployment**
+
+| Technology | Purpose |
+| --- | --- |
+| Railway | Backend hosting |
+| Supabase | Managed PostgreSQL |
+| Upstash | Managed Redis |
 
 **Developer Tools**
 
@@ -428,6 +453,7 @@ in the values.
 | `REDIS_HOST` | No | Redis host (default `localhost`). |
 | `REDIS_PORT` | No | Redis port (default `6379`). |
 | `REDIS_PASSWORD` | No | Redis password, if required. |
+| `REDIS_SSL_ENABLED` | No | Enable TLS for Redis (required by managed providers such as Upstash). Default `false`. |
 | `REDIS_CONNECT_TIMEOUT` | No | Redis connect timeout (default `2s`). |
 | `REDIS_TIMEOUT` | No | Redis command timeout (default `2s`). |
 | `CACHE_DEFAULT_TTL` | No | Default cache TTL (default `10m`). |
@@ -460,11 +486,13 @@ Screenshots will be added here.
 - [x] Repository navigation
 - [x] AI-powered repository chat
 - [x] MCP-inspired tool layer
-- [x] Redis caching
+- [x] Redis caching (metadata, README, directory, and file contents)
+- [x] Dark-themed Flutter client (temporary showcase build)
+- [x] Cloud deployment (Railway, Supabase, Upstash)
 
 **Upcoming**
 
-- [ ] Frontend UX improvements
+- [ ] Final frontend redesign
 - [ ] Conversation sidebar
 - [ ] Repository search
 - [ ] Multi-model support
