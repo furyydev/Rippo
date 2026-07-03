@@ -48,23 +48,59 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Rippo')),
+      appBar: AppBar(
+        titleSpacing: 16,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.hub_outlined,
+                size: 16,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text('Rippo'),
+          ],
+        ),
+      ),
       body: CustomScrollView(
         slivers: [
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
             sliver: SliverToBoxAdapter(
               child: FutureBuilder<GitHubUserModel>(
                 future: userFuture,
                 builder: (context, snapshot) {
                   final username = snapshot.data?.username;
-                  return Text(
-                    username == null || username.isEmpty
-                        ? 'Hi 👋'
-                        : 'Hi, $username 👋',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  final theme = Theme.of(context);
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        username == null || username.isEmpty
+                            ? 'Hi 👋'
+                            : 'Hi, $username 👋',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Browse and explore your repositories',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
@@ -94,13 +130,54 @@ class _HomeScreenState extends State<HomeScreen> {
 
               final repositories = snapshot.data ?? [];
               if (repositories.isEmpty) {
-                return const SliverFillRemaining(
-                  child: Center(child: Text('No repositories found')),
+                final theme = Theme.of(context);
+                return SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withValues(
+                                alpha: 0.12,
+                              ),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Icon(
+                              Icons.folder_open_outlined,
+                              size: 32,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Text(
+                            'No repositories found',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Repositories you have access to will appear here.',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 );
               }
 
               return SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
                 sliver: SliverList.builder(
                   itemCount: repositories.length,
                   itemBuilder: (context, index) {
@@ -117,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        minimum: const EdgeInsets.fromLTRB(20, 8, 20, 14),
         child: FutureBuilder<GitHubUserModel>(
           future: userFuture,
           builder: (context, snapshot) {

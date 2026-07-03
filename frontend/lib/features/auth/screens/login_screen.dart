@@ -70,32 +70,74 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+          gradient: RadialGradient(
+            center: Alignment(0, -0.6),
+            radius: 1.1,
+            colors: [Color(0xFF1B1436), Color(0xFF0D1117)],
           ),
         ),
-        child: Center(
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => _startOAuthLogin(context),
-              borderRadius: BorderRadius.circular(12),
-              child: Ink(
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                  child: Text(
-                    'Login',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Logo placeholder.
+                    Container(
+                      width: 84,
+                      height: 84,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7C3AED),
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(
+                              0xFF7C3AED,
+                            ).withValues(alpha: 0.35),
+                            blurRadius: 32,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.hub_outlined,
+                        color: Colors.white,
+                        size: 44,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 28),
+                    const Text(
+                      'Rippo',
+                      style: TextStyle(
+                        color: Color(0xFFE6EDF3),
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Understand repositories with AI.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFF8B949E),
+                        fontSize: 15,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 44),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => _startOAuthLogin(context),
+                        icon: const Icon(Icons.code, size: 20),
+                        label: const Text('Continue with GitHub'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

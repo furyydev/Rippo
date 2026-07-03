@@ -58,10 +58,7 @@ class _AskReppoScreenState extends State<AskReppoScreen> {
       if (!mounted) return;
       setState(() {
         messages.add(
-          ChatBubbleModel(
-            content: response.assistantMessage,
-            isUser: false,
-          ),
+          ChatBubbleModel(content: response.assistantMessage, isUser: false),
         );
       });
     } catch (error) {
@@ -95,22 +92,32 @@ class _AskReppoScreenState extends State<AskReppoScreen> {
 
   Widget messageBubble(ChatBubbleModel message) {
     final colors = Theme.of(context).colorScheme;
+    const radius = Radius.circular(18);
     return Align(
-      alignment: message.isUser
-          ? Alignment.centerRight
-          : Alignment.centerLeft,
+      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 600),
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: 18),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: message.isUser
-              ? colors.primaryContainer
+              ? colors.primary
               : colors.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.only(
+            topLeft: radius,
+            topRight: radius,
+            bottomLeft: message.isUser ? radius : const Radius.circular(4),
+            bottomRight: message.isUser ? const Radius.circular(4) : radius,
+          ),
+          border: message.isUser
+              ? null
+              : Border.all(color: Theme.of(context).dividerColor),
         ),
         child: message.isUser
-            ? Text(message.content)
+            ? Text(
+                message.content,
+                style: const TextStyle(color: Colors.white, height: 1.4),
+              )
             : MarkdownBody(data: message.content, selectable: true),
       ),
     );
@@ -120,13 +127,38 @@ class _AskReppoScreenState extends State<AskReppoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        titleSpacing: 0,
+        title: Row(
           children: [
-            const Text('Ask Rippo'),
-            Text(
-              '${widget.repository.owner}/${widget.repository.name}',
-              style: Theme.of(context).textTheme.bodySmall,
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: const Icon(
+                Icons.auto_awesome,
+                size: 17,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Ask Rippo'),
+                  Text(
+                    '${widget.repository.owner}/${widget.repository.name}',
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -137,7 +169,7 @@ class _AskReppoScreenState extends State<AskReppoScreen> {
             Expanded(
               child: ListView(
                 controller: scrollController,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
                 children: [
                   messageBubble(
                     const ChatBubbleModel(
@@ -159,23 +191,31 @@ class _AskReppoScreenState extends State<AskReppoScreen> {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                border: Border(
+                  top: BorderSide(color: Theme.of(context).dividerColor),
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(
                     child: TextField(
                       controller: messageController,
                       enabled: !isSending,
                       textInputAction: TextInputAction.send,
+                      minLines: 1,
+                      maxLines: 5,
                       onSubmitted: (_) => sendMessage(),
                       decoration: const InputDecoration(
                         hintText: 'Ask about this repository',
-                        border: OutlineInputBorder(),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   IconButton.filled(
                     onPressed: isSending ? null : sendMessage,
                     tooltip: 'Send',

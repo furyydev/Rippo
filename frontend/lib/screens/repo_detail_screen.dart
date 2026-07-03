@@ -90,14 +90,56 @@ class _RepoDetailScreenState extends State<RepoDetailScreen> {
   }
 
   Widget sectionTitle(String title, IconData icon) {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 28, 16, 10),
       child: Row(
         children: [
-          Icon(icon, size: 20),
-          const SizedBox(width: 8),
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
+          Icon(icon, size: 18, color: theme.colorScheme.primary),
+          const SizedBox(width: 10),
+          Text(
+            title.toUpperCase(),
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  MarkdownStyleSheet readmeStyleSheet() {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return MarkdownStyleSheet.fromTheme(theme).copyWith(
+      p: theme.textTheme.bodyMedium?.copyWith(
+        height: 1.6,
+        color: colors.onSurface,
+      ),
+      h1: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+      h2: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+      h3: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+      code: const TextStyle(
+        fontFamily: 'monospace',
+        fontSize: 13,
+        backgroundColor: Color(0xFF0D1117),
+      ),
+      codeblockPadding: const EdgeInsets.all(14),
+      codeblockDecoration: BoxDecoration(
+        color: const Color(0xFF0D1117),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: theme.dividerColor),
+      ),
+      blockquoteDecoration: BoxDecoration(
+        color: colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border(left: BorderSide(color: colors.primary, width: 3)),
+      ),
+      blockquotePadding: const EdgeInsets.all(12),
+      horizontalRuleDecoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: theme.dividerColor)),
       ),
     );
   }
@@ -115,19 +157,31 @@ class _RepoDetailScreenState extends State<RepoDetailScreen> {
   Widget buildPathHeader() {
     final path = isRepositoryRoot ? '/' : '/${widget.currentPath}';
 
+    final theme = Theme.of(context);
     return Container(
       width: double.infinity,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(bottom: BorderSide(color: theme.dividerColor)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
-          const Icon(Icons.account_tree_outlined, size: 18),
-          const SizedBox(width: 8),
+          Icon(
+            Icons.account_tree_outlined,
+            size: 18,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               path,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'monospace'),
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 13,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],
@@ -166,18 +220,24 @@ class _RepoDetailScreenState extends State<RepoDetailScreen> {
           );
         }
 
+        final theme = Theme.of(context);
         return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 12),
+          margin: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             children: contents.map((item) {
               final isDirectory = item.type == 'dir';
               return ListTile(
                 leading: Icon(
-                  isDirectory ? Icons.folder : Icons.insert_drive_file,
+                  isDirectory
+                      ? Icons.folder_outlined
+                      : Icons.insert_drive_file_outlined,
+                  color: isDirectory
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
                 ),
                 title: Text(item.name),
                 subtitle: Text(isDirectory ? 'folder' : 'file'),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: const Icon(Icons.chevron_right, size: 20),
                 onTap: () => openItem(item),
               );
             }).toList(),
@@ -209,10 +269,14 @@ class _RepoDetailScreenState extends State<RepoDetailScreen> {
 
         final readme = snapshot.data!;
         return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 12),
+          margin: const EdgeInsets.symmetric(horizontal: 16),
           child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: MarkdownBody(data: readme.content, selectable: true),
+            padding: const EdgeInsets.all(20),
+            child: MarkdownBody(
+              data: readme.content,
+              selectable: true,
+              styleSheet: readmeStyleSheet(),
+            ),
           ),
         );
       },
@@ -242,11 +306,11 @@ class _RepoDetailScreenState extends State<RepoDetailScreen> {
         }
 
         return Card(
-          margin: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           child: Column(
             children: commits.map((commit) {
               return ListTile(
-                leading: const Icon(Icons.commit),
+                leading: const Icon(Icons.commit, size: 20),
                 title: Text(
                   commit.message,
                   maxLines: 2,
@@ -291,18 +355,22 @@ class _RepoDetailScreenState extends State<RepoDetailScreen> {
       ),
       bottomNavigationBar: isRepositoryRoot
           ? SafeArea(
-              minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: FilledButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          AskReppoScreen(repository: widget.repository),
-                    ),
-                  );
-                },
-                child: const Text('Ask Rippo'),
+              minimum: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            AskReppoScreen(repository: widget.repository),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.auto_awesome, size: 20),
+                  label: const Text('Ask Rippo'),
+                ),
               ),
             )
           : null,

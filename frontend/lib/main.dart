@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:reppo/core/app_theme.dart';
 import 'package:reppo/features/auth/screens/login_screen.dart';
 
 Future<void> main() async {
@@ -16,10 +17,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Reppo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF5B5BD6)),
-        useMaterial3: true,
-      ),
+      theme: RippoTheme.dark(),
+      darkTheme: RippoTheme.dark(),
+      themeMode: ThemeMode.dark,
       home: const LoginScreen(),
     );
   }
