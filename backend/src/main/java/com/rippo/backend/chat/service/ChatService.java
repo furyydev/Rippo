@@ -1,6 +1,6 @@
 package com.rippo.backend.chat.service;
 
-import com.rippo.backend.ai.service.GeminiService;
+import com.rippo.backend.chat.agent.AgentLoop;
 import com.rippo.backend.chat.dto.ChatRequest;
 import com.rippo.backend.chat.dto.ChatResponse;
 import com.rippo.backend.chat.model.RepositoryContext;
@@ -9,27 +9,37 @@ import com.rippo.backend.entity.ChatMessageRole;
 import com.rippo.backend.entity.ChatSession;
 import com.rippo.backend.entity.User;
 import com.rippo.backend.service.ChatPersistenceService;
+import com.rippo.backend.mcp.service.MCPService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ChatService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChatService.class);
+    private static final String MDC_CHAT_SESSION_ID = "chatSessionId";
+
     private final ChatPersistenceService chatPersistenceService;
     private final RepositoryContextService repositoryContextService;
     private final PromptBuilder promptBuilder;
-    private final GeminiService geminiService;
+    private final AgentLoop agentLoop;
+    private final MCPService mcpService;
 
     public ChatService(
             ChatPersistenceService chatPersistenceService,
             RepositoryContextService repositoryContextService,
             PromptBuilder promptBuilder,
-            GeminiService geminiService
+            AgentLoop agentLoop,
+            MCPService mcpService
     ) {
         this.chatPersistenceService = chatPersistenceService;
         this.repositoryContextService = repositoryContextService;
         this.promptBuilder = promptBuilder;
-        this.geminiService = geminiService;
+        this.agentLoop = agentLoop;
+        this.mcpService = mcpService;
     }
 
     public ChatResponse chat(ChatRequest request, User user, String accessToken) {
@@ -56,25 +66,49 @@ public class ChatService {
                 repositoryName,
                 accessToken
         );
-        String prompt = promptBuilder.build(context, userMessage);
-
-        chatPersistenceService.addMessage(
-                chatSession,
-                ChatMessageRole.USER,
-                userMessage
-        );
-        String assistantText = geminiService.generateText(prompt);
-        ChatMessage assistantMessage = chatPersistenceService.addMessage(
-                chatSession,
-                ChatMessageRole.ASSISTANT,
-                assistantText
+        String prompt = promptBuilder.build(
+                context,
+                userMessage,
+                mcpService.getToolDefinitions()
         );
 
-        return new ChatResponse(
-                assistantMessage.getContent(),
-                chatSession.getId(),
-                assistantMessage.getCreatedAt()
-        );
+        MDC.put(MDC_CHAT_SESSION_ID, String.valueOf(chatSession.getId()));
+        try {
+            LOGGER.info(
+                    "Chat agent started: repository={}/{}",
+                    repositoryOwner,
+                    repositoryName
+            );
+            chatPersistenceService.addMessage(
+                    chatSession,
+                    ChatMessageRole.USER,
+                    userMessage
+            );
+            String assistantText = agentLoop.run(
+                    prompt,
+                    accessToken,
+                    repositoryOwner,
+                    repositoryName
+            );
+            ChatMessage assistantMessage = chatPersistenceService.addMessage(
+                    chatSession,
+                    ChatMessageRole.ASSISTANT,
+                    assistantText
+            );
+            LOGGER.info(
+                    "Chat agent completed: repository={}/{}",
+                    repositoryOwner,
+                    repositoryName
+            );
+
+            return new ChatResponse(
+                    assistantMessage.getContent(),
+                    chatSession.getId(),
+                    assistantMessage.getCreatedAt()
+            );
+        } finally {
+            MDC.remove(MDC_CHAT_SESSION_ID);
+        }
     }
 
     private void validateRequest(ChatRequest request) {

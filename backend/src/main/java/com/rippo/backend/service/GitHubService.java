@@ -2,10 +2,19 @@ package com.rippo.backend.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rippo.backend.cache.config.CacheProperties;
+import com.rippo.backend.cache.service.CacheService;
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -16,14 +25,25 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Service
 public class GitHubService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(GitHubService.class);
+
     private static final int MAX_FILE_SIZE_BYTES = 1_000_000;
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
+    private final CacheService cacheService;
+    private final CacheProperties cacheProperties;
 
-    public GitHubService(WebClient webClient, ObjectMapper objectMapper) {
+    public GitHubService(
+            WebClient webClient,
+            ObjectMapper objectMapper,
+            CacheService cacheService,
+            CacheProperties cacheProperties
+    ) {
         this.webClient = webClient;
         this.objectMapper = objectMapper;
+        this.cacheService = cacheService;
+        this.cacheProperties = cacheProperties;
     }
 
     public String getRepositories(String accessToken) {
@@ -31,6 +51,71 @@ public class GitHubService {
                 "https://api.github.com/user/repos",
                 accessToken
         );
+    }
+
+    public Map<String, Object> getRepositoryInfo(
+            String owner,
+            String repo,
+            String accessToken
+    ) {
+        long startNanos = System.nanoTime();
+        String cacheKey = "repo:" + owner + ":" + repo + ":metadata";
+
+        @SuppressWarnings("unchecked")
+        Optional<Map<String, Object>> cached = cacheService.get(cacheKey, Map.class)
+                .map(value -> (Map<String, Object>) value);
+        if (cached.isPresent()) {
+            LOGGER.info(
+                    "Repository metadata cache HIT: owner={} repo={} executionMs={}",
+                    owner,
+                    repo,
+                    (System.nanoTime() - startNanos) / 1_000_000
+            );
+            return cached.get();
+        }
+
+        Map<String, Object> metadata = fetchRepositoryInfoFromGitHub(owner, repo, accessToken);
+        boolean stored = cacheService.put(
+                cacheKey,
+                metadata,
+                cacheProperties.getRepositoryMetadataTtl()
+        );
+        LOGGER.info(
+                "Repository metadata cache MISS: owner={} repo={} stored={} executionMs={}",
+                owner,
+                repo,
+                stored,
+                (System.nanoTime() - startNanos) / 1_000_000
+        );
+        return metadata;
+    }
+
+    private Map<String, Object> fetchRepositoryInfoFromGitHub(
+            String owner,
+            String repo,
+            String accessToken
+    ) {
+        JsonNode repository = readJson(
+                makeGitHubGetRequest(buildRepoUrl(owner, repo, ""), accessToken)
+        );
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("name", repository.path("name").asText());
+        response.put("fullName", repository.path("full_name").asText());
+        response.put("owner", repository.path("owner").path("login").asText());
+        response.put("description", repository.path("description").isNull()
+                ? null
+                : repository.path("description").asText());
+        response.put("defaultBranch", repository.path("default_branch").asText());
+        response.put("private", repository.path("private").asBoolean());
+        response.put("htmlUrl", repository.path("html_url").asText());
+        response.put("language", repository.path("language").isNull()
+                ? null
+                : repository.path("language").asText());
+        response.put("stars", repository.path("stargazers_count").asInt());
+        response.put("forks", repository.path("forks_count").asInt());
+        response.put("openIssues", repository.path("open_issues_count").asInt());
+        return response;
     }
 
     public String getRepositoryContents(
@@ -46,7 +131,125 @@ public class GitHubService {
         return makeGitHubGetRequest(url, accessToken);
     }
 
+    public List<Map<String, Object>> getDirectoryContents(
+            String owner,
+            String repo,
+            String path,
+            String accessToken
+    ) {
+        long startNanos = System.nanoTime();
+        String normalizedPath = normalizePath(path);
+        String cacheKeyPath = normalizedPath.isEmpty() ? "root" : normalizedPath;
+        String cacheKey = "repo:" + owner + ":" + repo + ":dir:" + cacheKeyPath;
+
+        @SuppressWarnings("unchecked")
+        Optional<List<Map<String, Object>>> cached = cacheService.get(cacheKey, List.class)
+                .map(value -> (List<Map<String, Object>>) value);
+        if (cached.isPresent()) {
+            LOGGER.info(
+                    "Directory cache HIT: owner={} repo={} path={} executionMs={}",
+                    owner,
+                    repo,
+                    cacheKeyPath,
+                    (System.nanoTime() - startNanos) / 1_000_000
+            );
+            return cached.get();
+        }
+
+        List<Map<String, Object>> listing =
+                fetchDirectoryContentsFromGitHub(owner, repo, path, accessToken);
+        boolean stored = cacheService.put(cacheKey, listing, cacheProperties.getDirectoryTtl());
+        LOGGER.info(
+                "Directory cache MISS: owner={} repo={} path={} stored={} executionMs={}",
+                owner,
+                repo,
+                cacheKeyPath,
+                stored,
+                (System.nanoTime() - startNanos) / 1_000_000
+        );
+        return listing;
+    }
+
+    private List<Map<String, Object>> fetchDirectoryContentsFromGitHub(
+            String owner,
+            String repo,
+            String path,
+            String accessToken
+    ) {
+        JsonNode contents = readJson(getRepositoryContents(owner, repo, path, accessToken));
+        if (!contents.isArray()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "The requested path is not a directory"
+            );
+        }
+
+        List<Map<String, Object>> response = new ArrayList<>();
+        for (JsonNode item : contents) {
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("name", item.path("name").asText());
+            entry.put("path", item.path("path").asText());
+            entry.put("type", "dir".equals(item.path("type").asText()) ? "folder" : "file");
+            if (item.hasNonNull("size")) {
+                entry.put("size", item.path("size").asInt());
+            }
+            response.add(entry);
+        }
+        return response;
+    }
+
+    /**
+     * Normalizes a repository path for deterministic cache-key generation only.
+     * Trims surrounding whitespace, collapses duplicate slashes, and strips leading
+     * and trailing slashes. Returns an empty string for a null, blank, or "/" path.
+     * This is intentionally generic so it can be reused for other path-based caches.
+     * It must NOT be used to alter the path sent to the GitHub API.
+     */
+    private String normalizePath(String path) {
+        if (path == null) {
+            return "";
+        }
+        String normalized = path.trim()
+                .replaceAll("/{2,}", "/")
+                .replaceAll("^/+", "")
+                .replaceAll("/+$", "");
+        return normalized;
+    }
+
     public Map<String, Object> getRepositoryReadme(
+            String owner,
+            String repo,
+            String accessToken
+    ) {
+        long startNanos = System.nanoTime();
+        String cacheKey = "repo:" + owner + ":" + repo + ":readme";
+
+        @SuppressWarnings("unchecked")
+        Optional<Map<String, Object>> cached = cacheService.get(cacheKey, Map.class)
+                .map(value -> (Map<String, Object>) value);
+        if (cached.isPresent()) {
+            LOGGER.info(
+                    "README cache HIT: owner={} repo={} executionMs={}",
+                    owner,
+                    repo,
+                    (System.nanoTime() - startNanos) / 1_000_000
+            );
+            return cached.get();
+        }
+
+        Map<String, Object> readme = fetchRepositoryReadmeFromGitHub(owner, repo, accessToken);
+        boolean stored = cacheService.put(cacheKey, readme, cacheProperties.getReadmeTtl());
+        LOGGER.info(
+                "README cache MISS: owner={} repo={} stored={} executionMs={}",
+                owner,
+                repo,
+                stored,
+                (System.nanoTime() - startNanos) / 1_000_000
+        );
+        return readme;
+    }
+
+    private Map<String, Object> fetchRepositoryReadmeFromGitHub(
             String owner,
             String repo,
             String accessToken
@@ -100,6 +303,45 @@ public class GitHubService {
             );
         }
 
+        long startNanos = System.nanoTime();
+        String normalizedPath = normalizePath(path);
+        String cacheKey = "repo:" + owner + ":" + repo + ":file:" + normalizedPath;
+
+        @SuppressWarnings("unchecked")
+        Optional<Map<String, Object>> cached = cacheService.get(cacheKey, Map.class)
+                .map(value -> (Map<String, Object>) value);
+        if (cached.isPresent()) {
+            LOGGER.info(
+                    "File cache HIT: owner={} repo={} path={} executionMs={}",
+                    owner,
+                    repo,
+                    normalizedPath,
+                    (System.nanoTime() - startNanos) / 1_000_000
+            );
+            return cached.get();
+        }
+
+        // Only successful responses reach this point; failures throw before the cache PUT,
+        // so not-found, not-a-file, and size-limit errors are never cached.
+        Map<String, Object> file = fetchFileContentFromGitHub(owner, repo, path, accessToken);
+        boolean stored = cacheService.put(cacheKey, file, cacheProperties.getFileTtl());
+        LOGGER.info(
+                "File cache MISS: owner={} repo={} path={} stored={} executionMs={}",
+                owner,
+                repo,
+                normalizedPath,
+                stored,
+                (System.nanoTime() - startNanos) / 1_000_000
+        );
+        return file;
+    }
+
+    private Map<String, Object> fetchFileContentFromGitHub(
+            String owner,
+            String repo,
+            String path,
+            String accessToken
+    ) {
         String url = buildRepoUrl(owner, repo, "contents", path);
         JsonNode file = readJson(makeGitHubGetRequest(url, accessToken));
 
@@ -176,7 +418,25 @@ public class GitHubService {
 
         try {
             byte[] decodedBytes = Base64.getMimeDecoder().decode(content);
-            return new String(decodedBytes, StandardCharsets.UTF_8);
+            for (byte decodedByte : decodedBytes) {
+                if (decodedByte == 0) {
+                    throw new ResponseStatusException(
+                            HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                            "The requested file contains binary data"
+                    );
+                }
+            }
+            return StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(java.nio.ByteBuffer.wrap(decodedBytes))
+                    .toString();
+        } catch (CharacterCodingException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                    "The requested file is not UTF-8 text",
+                    exception
+            );
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_ENTITY,
