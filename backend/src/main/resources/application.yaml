@@ -66,3 +66,6 @@ rippo:
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [session=%X{chatSessionId:-none}] %logger{36} - %msg%n"
+
+server:
+  port: ${PORT:8080}
