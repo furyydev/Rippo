@@ -49,6 +49,24 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # Generates native launcher icons from a source image.
+  flutter_launcher_icons: ^0.14.1
+
+# Launcher icon configuration.
+# Provide a square 1024x1024 PNG at the paths below, then run:
+#   flutter pub get
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: false
+  # Single source image (the Rippo wordmark). Save it at the path below.
+  image_path: "assets/icon/rippo_icon.png"
+  # Adaptive icon: white background matches the logo's own white background,
+  # foreground reuses the same image so only one file is required.
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/rippo_icon.png"
+  min_sdk_android: 21
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
